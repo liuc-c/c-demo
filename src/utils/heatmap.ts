@@ -32,8 +32,8 @@ export function getActivityData(clickEvents: ClickEvent[], dom: DomEvent | null)
         // elementData.points += 1
       }
       else {
-        elementData.x.push(clickData.x)
-        elementData.y.push(clickData.y)
+        elementData.x.push(clickData.eX)
+        elementData.y.push(clickData.eY)
         elementData.clicks.push(1)
         elementData.totalclicks += 1
         elementData.points += 1
@@ -44,8 +44,8 @@ export function getActivityData(clickEvents: ClickEvent[], dom: DomEvent | null)
         hash: clickData.hash,
         selector: getSelector(clickData, dom),
         totalclicks: 1,
-        x: [clickData.x],
-        y: [clickData.y],
+        x: [clickData.eX],
+        y: [clickData.eY],
         clicks: [1],
         points: 1,
       })

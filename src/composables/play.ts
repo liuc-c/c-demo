@@ -1,9 +1,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import type { Data } from 'clarity-decode'
-import { decode } from 'clarity-decode'
 import type { Envelope } from 'clarity-js/types/data'
-import type { ClickData, PointerData } from 'clarity-js/types/interaction'
-import type { ClickEvent, PointerEvent } from 'clarity-decode/types/interaction'
+import { decode } from '~/utils/decode'
 import { Visualizer } from '~/utils/visualize'
 import { useFormattedTime } from '~/utils/dataFormat'
 import { getDetailsBySidApi, getListApi } from '~/api/clarity'
@@ -33,8 +31,6 @@ const isSkipEmptyEvent = ref(true) // 是否跳过空事件
 const list = ref<ListItem[]>([])
 const currSid = ref('')
 const currDoms = ref([]) // 当前的dom数组
-const clickList: ClickData[] = [] // 点击事件数组
-const pointerList: PointerData[] = [] // 指针事件数组
 const pageNum = ref(0)
 // 深拷贝
 function copy(input: any): any {
@@ -61,26 +57,9 @@ function resume(): void {
   isPaused.value = false
 }
 
-// 收集点击数据和指针数据
-function collectInteractionData(event: Data.DecodedPayload): void {
-  if (event.click) {
-    event.click.forEach((clickEvent: ClickEvent) => {
-      clickList.push(clickEvent.data)
-    })
-  }
-  if (event.pointer) {
-    event.pointer.forEach((pointerEvent: PointerEvent) => {
-      pointerList.push(pointerEvent.data)
-    })
-  }
-  // console.log(clickList)
-  // console.log(pointerList)
-}
-
 function dataChange(message: any, isReset = false) {
   if (message) {
     const decoded = decode(message)
-    collectInteractionData(decoded)
     if (isReset || decoded.envelope.sequence === 1 || visualize.state === null) {
       reset(decoded.envelope, decoded.dimension?.[0].data[0][0])
     }

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-// const merged = visualize.merge(decoded)
-// const clickEvents = merged.events.filter((event: any) => event.event === 16 || event.event === 9)
-// const dom = merged.dom as DomEvent | null
-// console.log(getActivityData(decodeJson as DecodedPayload[]))
 import { onMounted } from 'vue'
 import type { DecodedPayload } from 'clarity-decode/types/data'
 import type { DomEvent } from 'clarity-decode/types/layout'
-import decoded from '~/api/clarity-req4l5-1-decoded.json'
+import decoded from '~/api/clarity-1dyfdui-1-decoded.json'
+import decoded2 from '~/api/clarity-1nt9n0x-1-decoded.json'
+import decoded3 from '~/api/clarity-1ujmig4-1-decoded.json'
+import decoded4 from '~/api/clarity-req4l5-1-decoded.json'
+import decoded5 from '~/api/clarity-11ut0ax-1-decoded.json'
 import { Visualizer } from '~/utils/visualize'
 import { getActivityData } from '~/utils/heatmap'
 
@@ -25,21 +25,46 @@ function resize(width: number, height: number): void {
   iframe.style.transformOrigin = '0 0 0'
   iframe.style.transform = `scale(${scale})`
   iframe.style.border = '1px solid #cccccc'
-  iframe.style.overflow = 'hidden'
-  iframe.style.left = ((container.clientWidth - (width * scale)) / 2 + 200) + px
+  iframe.style.left = ((container.clientWidth - (width * scale)) / 2) + px
 }
 
-onMounted(() => {
+function isMobileDevice(userAgent: string | undefined): boolean {
+  if (!userAgent) {
+    return false
+  }
+  return /android|webos|iphone|ipad|ipod|blackberry|windows phone|opera mini|iemobile|mobile|silk|fennec|bada|tizen|symbian|nokia|palmsource|meego|sailfish|kindle|playbook|bb10|rim/i.test(userAgent)
+}
+
+onMounted(async () => {
   const visualize = new Visualizer()
-  const iframe = document.getElementById('clarity') as HTMLIFrameElement
+  let iframe = document.getElementById('clarity') as HTMLIFrameElement
+  if (iframe && iframe.parentElement) {
+    iframe.parentElement.removeChild(iframe)
+  }
+  iframe = document.createElement('iframe')
+  iframe.id = 'clarity'
+  iframe.title = 'Microsoft Clarity'
+  iframe.setAttribute('scrolling', 'no')
+  const targetDom = document.querySelector('.iframe-box') as HTMLElement
+  targetDom.appendChild(iframe)
+  iframe.style.display = 'block'
+
   const dJson = decoded as DecodedPayload[]
+  const dJson2 = decoded2 as DecodedPayload[]
+  const dJson3 = decoded3 as DecodedPayload[]
+  const dJson4 = decoded4 as DecodedPayload[]
+  const dJson5 = decoded5 as DecodedPayload[]
   const envelope = dJson[0].envelope
-  const merged = visualize.merge(dJson)
+  const merged = visualize.merge([...dJson, ...dJson2, ...dJson3, ...dJson4, ...dJson5])
+  // const merged = visualize.merge(dJson)
   const clickEvents = merged.events.filter((event: any) => event.event === 16 || event.event === 9)
   const dom = merged.dom as DomEvent | null
   const activity = getActivityData(clickEvents, dom)
-  visualize.setup(iframe.contentWindow as Window, { version: envelope.version, onresize: resize })
-  visualize.html(dJson, iframe.contentWindow as Window)
+  const mobile = isMobileDevice(dJson[0].dimension?.[0].data[0][0])
+  visualize.setup(iframe.contentWindow as Window, { version: envelope.version, onresize: resize, mobile })
+  const resizeDom = merged.events.filter((event: any) => event.event === 11)
+  await visualize.dom(dom)
+  await visualize.render(resizeDom)
   visualize.clickmap(activity)
 })
 </script>
@@ -52,9 +77,8 @@ onMounted(() => {
 
 <style scoped>
 .iframe-box {
-  height: 90vh;
-  width: 90vw;
-  overflow: hidden;
+  height: calc(100vh  - 5rem);
+  width: calc(100vw - 2rem);
   border: 0;
 }
 </style>

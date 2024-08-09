@@ -24,7 +24,7 @@ const {
   <div flex overflow-hidden>
     <ul class="left">
       <li
-        v-for="item in list" :key="item.sid" :class="{ 'text-green': currSid === item.sid }" class="cursor-pointer"
+        v-for="item in list" :key="item.sid" :class="{ 'text-green': currSid === item.sid }" class="cursor-pointer hover:color-teal"
         @click="clickListItem(item.sid)"
       >
         {{ item.createTime }}

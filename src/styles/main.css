@@ -36,3 +36,26 @@ html.dark {
 .dark::view-transition-new(root) {
   z-index: 1;
 }
+.red-border{
+  display: block !important;
+  z-index: 9999;
+  border: 1px solid red;
+  animation: border-flash 1s infinite;
+}
+:hover.rectangle{
+  z-index: 9999;
+  border: 1px solid red;
+  animation: border-flash 1s infinite;
+}
+/* 边框闪烁 */
+@keyframes border-flash {
+  0% {
+    border-color: red;
+  }
+  50% {
+    border-color: transparent;
+  }
+  100% {
+    border-color: red;
+  }
+}

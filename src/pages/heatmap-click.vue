@@ -2,14 +2,15 @@
 import { onMounted, ref } from 'vue'
 import type { DecodedPayload } from 'clarity-decode/types/data'
 import type { DomEvent } from 'clarity-decode/types/layout'
-import decoded from '~/api/clarity-1dyfdui-1-decoded.json'
-import decoded2 from '~/api/clarity-1nt9n0x-1-decoded.json'
-import decoded4 from '~/api/clarity-req4l5-1-decoded.json'
-import decoded5 from '~/api/clarity-11ut0ax-1-decoded.json'
+import decoded from '~/data/clarity-1dyfdui-1-decoded.json'
+import decoded2 from '~/data/clarity-1nt9n0x-1-decoded.json'
+import decoded4 from '~/data/clarity-req4l5-1-decoded.json'
+import decoded5 from '~/data/clarity-11ut0ax-1-decoded.json'
 import { Visualizer } from '~/utils/visualize'
 import { getActivityData, renderClickMap, setupIframe } from '~/utils/heatmap'
 import { isMobileDevice, throttle } from '~/utils/util'
 import type { CustomActivity, CustomElementData } from '~/type'
+import { Event } from '~/emnus'
 
 let domWidth: number, domHeight: number, iframeW: number, iframeH: number, currScale: number
 const activity = ref<CustomActivity>([])
@@ -47,33 +48,7 @@ function resize(width: number, height: number): void {
   iframeCurrHeight = container.clientHeight / currScale
 }
 
-onMounted(async () => {
-  const iframe = setupIframe()
-  const targetDom = document.querySelector('.heatmap-wrapper') as HTMLElement
-  targetDom.appendChild(iframe)
-
-  const dJson = decoded as DecodedPayload[]
-  const dJson2 = decoded2 as DecodedPayload[]
-  const dJson4 = decoded4 as DecodedPayload[]
-  const dJson5 = decoded5 as DecodedPayload[]
-
-  const envelope = dJson[0].envelope
-  const merged = visualize.merge([...dJson, ...dJson2, ...dJson4, ...dJson5])
-  const clickEvents = merged.events.filter((event: any) => event.event === 16 || event.event === 9)
-  const dom = merged.dom as DomEvent | null
-  activity.value = getActivityData(clickEvents, dom)
-  const mobile = isMobileDevice(dJson[0].dimension?.[0].data[0][0])
-  visualize.setup(iframe.contentWindow as Window, { version: envelope.version, onresize: resize, mobile })
-  const domWH = merged.events.find((event: any) => event.event === 8)?.data
-  if (domWH) {
-    domWidth = domWH.width
-    domHeight = domWH.height
-  }
-  const resizeDom = merged.events.filter((event: any) => event.event === 11)
-  await visualize.dom(dom)
-  await visualize.render(resizeDom)
-  await renderClickMap(visualize, activity.value, 0)
-
+function setupEventListeners() {
   const heatmapVisual = document.querySelector('.heatmaps-heatmap-visual') as HTMLElement
   const throttleRender = throttle(() => {
     renderClickMap(visualize, activity.value, heatmapVisual.scrollTop / currScale)
@@ -91,6 +66,36 @@ onMounted(async () => {
     }
     throttleResize()
   })
+}
+
+onMounted(async () => {
+  const iframe = setupIframe()
+  const targetDom = document.querySelector('.heatmap-wrapper') as HTMLElement
+  targetDom.appendChild(iframe)
+
+  const dJson = decoded as DecodedPayload[]
+  const dJson2 = decoded2 as DecodedPayload[]
+  const dJson4 = decoded4 as DecodedPayload[]
+  const dJson5 = decoded5 as DecodedPayload[]
+
+  const envelope = dJson[0].envelope
+  const merged = visualize.merge([...dJson, ...dJson2, ...dJson4, ...dJson5])
+  const clickEvents = merged.events.filter((event: any) => event.event === 16 || event.event === 9)
+  const dom = merged.dom as DomEvent | null
+  activity.value = getActivityData(clickEvents, dom)
+  const mobile = isMobileDevice(dJson[0].dimension?.[0].data[0][0])
+  visualize.setup(iframe.contentWindow as Window, { version: envelope.version, onresize: resize, mobile })
+  const domWH = merged.events.find((event: any) => event.event === Event.Document) as any
+  if (domWH?.data) {
+    domWidth = domWH.data.width
+    domHeight = domWH.data.height
+  }
+  const resizeDom = merged.events.filter((event: any) => event.event === Event.Resize)
+  await visualize.dom(dom)
+  await visualize.render(resizeDom)
+  await renderClickMap(visualize, activity.value, 0)
+
+  setupEventListeners()
 })
 let timer: any = null
 function toSelector(item: CustomElementData): void {
@@ -126,7 +131,6 @@ const canvasOpacity = ref(1)
 function changeOpacity() {
   const iframe = document.getElementById('clarity') as HTMLIFrameElement
   const canvas = iframe.contentDocument?.getElementById('clarity-heatmap-canvas') as HTMLCanvasElement
-  console.log(canvas)
   if (canvas) {
     canvas.style.opacity = canvasOpacity.value.toString()
   }

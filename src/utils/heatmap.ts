@@ -1,8 +1,13 @@
 import type { ClickData } from 'clarity-js/types/interaction'
 import type { DomData, DomEvent } from 'clarity-decode/types/layout'
 import type { ClickEvent } from 'clarity-decode/types/interaction'
-import type { CustomActivity, CustomElementData, Rectangle } from '~/type'
+import type { CustomActivity, CustomElementData, Rectangle, ScrollMapInfo } from '~/type'
 import { copy } from '~/utils/util'
+
+export async function renderScrollMap(visualize: any, scrollMapInfo: ScrollMapInfo[], scrollY: number) {
+  await scrollToY(visualize, scrollY)
+  visualize.scrollmap(scrollMapInfo)
+}
 
 function getSelector(clickData: ClickData, dom: DomEvent | null): string {
   if (!dom?.data)
@@ -38,7 +43,7 @@ function createRectangleElement(elementData: CustomElementData): HTMLDivElement 
   rectDom.classList.add('rectangle')
   // rectDom.textContent = `${elementData.content}(${elementData.totalclicks})`
   const numClicks = document.createElement('div')
-  numClicks.textContent = (elementData.ranking + 1).toString()
+  numClicks.textContent = (elementData.ranking).toString()
   Object.assign(numClicks.style, {
     'position': 'absolute',
     'width': '36px',
@@ -87,7 +92,6 @@ function sortRectangles(activity: CustomActivity): CustomActivity {
   }
   return newActivity
 }
-
 function renderClickRectangles(activity: CustomActivity) {
   const renderContainer = document.querySelector('.heatmap-elements') as HTMLDivElement
   if (renderContainer.querySelectorAll('div').length > 0)
@@ -160,7 +164,7 @@ export function getActivityData(clickEvents: ClickEvent[], dom: DomEvent | null)
   return Array.from(elementDataMap.values())
     .sort((a, b) => b.totalclicks - a.totalclicks)
     .map((element, index) => {
-      element.ranking = index
+      element.ranking = index + 1
       return element
     })
 }

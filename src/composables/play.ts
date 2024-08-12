@@ -1,11 +1,13 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import type { Data } from 'clarity-decode'
 import type { Envelope } from 'clarity-js/types/data'
-import { decode } from '~/utils/decode'
+import { decode } from 'clarity-decode'
 import { Visualizer } from '~/utils/visualize'
 import { useFormattedTime } from '~/utils/dataFormat'
 import { getDetailsBySidApi, getListApi } from '~/api/clarity'
 import type { ListItem } from '~/type'
+import { setupIframe } from '~/utils/heatmap'
+import { copy } from '~/utils/util'
 
 // const { data } = useBroadcastChannel({ name: 'test_clarity' })
 
@@ -21,7 +23,8 @@ const visualize = new Visualizer()
 let sessionId = '' // 会话ID
 let preEvents: Data.DecodedEvent[] = [] // 前置事件数组，用于拖动进度条时，恢复之前的事件
 let events: Data.DecodedEvent[] = [] // 事件数组，用于播放事件
-const dJson: Data.DecodedPayload[] = [] // 解码后的数据数组
+let dJson: Data.DecodedPayload[] = [] // 解码后的数据数组
+let eJson: Data.DecodedPayload[] = [] // 解码后的数据数组
 const isPaused = ref(false) // 是否暂停
 const currentTime = ref(0) // 当前进度条时间
 const currentTimeUI = useFormattedTime(currentTime) // 当前时间的格式化，用于显示
@@ -32,16 +35,15 @@ const list = ref<ListItem[]>([])
 const currSid = ref('')
 const currDoms = ref([]) // 当前的dom数组
 const pageNum = ref(0)
-// 深拷贝
-function copy(input: any): any {
-  return JSON.parse(JSON.stringify(input))
-}
+let iframeW: number, iframeH: number
 
 function save(): void {
-  const suffix = 'decoded'
-  const id = `${sessionId}-${pageNum.value}`
-  const json = JSON.stringify(dJson, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
+  const suffix = 'encoded'
+  const id = `${sessionId || ''}-${pageNum.value || ''}`
+  // const json = JSON.stringify(dJson, null, 2)
+  // const json = JSON.stringify(eJson, null, 2)
+  // const json = JSON.stringify(eJson).replace(/\[\{"e"/g, '\r\n  [{"e"').replace(']}]]', ']}]\r\n]')
+  const blob = new Blob([`[${eJson.toString()}]`], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.setAttribute('download', `clarity-${id}-${suffix}.json`)
@@ -64,6 +66,7 @@ function dataChange(message: any, isReset = false) {
       reset(decoded.envelope, decoded.dimension?.[0].data[0][0])
     }
     dJson.push(copy(decoded))
+    eJson.push(message)
     const merged = visualize.merge([decoded]) as any
     events = events.concat(merged.events).sort(sort)
     totalTime.value = merged.events[merged.events.length - 1].time
@@ -150,34 +153,30 @@ function playEvents(): void {
 }
 
 function resize(width: number, height: number): void {
+  iframeW = width
+  iframeH = height
   const margin = 10
-  const px = 'px'
   const iframe = document.getElementById('clarity') as HTMLIFrameElement
   const container = document.querySelector('.iframe-box') as HTMLElement
   const offsetTop = iframe.offsetTop
   const availableWidth = container.clientWidth - (2 * margin)
   const availableHeight = container.clientHeight - offsetTop - (2 * margin)
   const scale = Math.min(Math.min(availableWidth / width, 1), Math.min(availableHeight / height, 1))
-  iframe.style.position = 'absolute'
-  iframe.style.width = width + px
-  iframe.style.height = height + px
-  iframe.style.transformOrigin = '0 0 0'
-  iframe.style.transform = `scale(${scale})`
-  iframe.style.border = '1px solid #cccccc'
-  iframe.style.overflow = 'hidden'
-  iframe.style.left = ((container.clientWidth - (width * scale)) / 2 + 200) + px
+  Object.assign(iframe.style, {
+    position: 'absolute',
+    width: `${width}px`,
+    height: `${height}px`,
+    transformOrigin: '0 0 0',
+    transform: `scale(${scale})`,
+    border: '1px solid #cccccc',
+    overflow: 'hidden',
+    left: `${(container.clientWidth - (width * scale)) / 2 + 200}px`,
+  })
 }
 
 function reset(envelope: Envelope, userAgent: string | undefined): void {
   console.clear()
-  let iframe = document.getElementById('clarity') as HTMLIFrameElement
-  if (iframe && iframe.parentElement) {
-    iframe.parentElement.removeChild(iframe)
-  }
-  iframe = document.createElement('iframe')
-  iframe.id = 'clarity'
-  iframe.title = 'Microsoft Clarity'
-  iframe.setAttribute('scrolling', 'no')
+  const iframe = setupIframe()
   const targetDom = document.querySelector('.iframe-box') as HTMLElement
   targetDom.appendChild(iframe)
   if (sessionId !== envelope.sessionId) {
@@ -187,7 +186,6 @@ function reset(envelope: Envelope, userAgent: string | undefined): void {
   events = []
   currentTime.value = 0
 
-  iframe.style.display = 'block'
   const mobile = isMobileDevice(userAgent)
   visualize.setup(iframe.contentWindow as Window, { version: envelope.version, onresize: resize, mobile })
 }
@@ -229,14 +227,16 @@ async function clickListItem(sid: string) {
   if (currSid.value === sid) {
     return
   }
+  if (intervalId !== null) {
+    clearInterval(intervalId)
+  }
+  dJson = []
+  eJson = []
   currI = 0
   currSid.value = sid
   currentTime.value = 0
   totalTime.value = 0
   await getDetail()
-  if (intervalId !== null) {
-    clearInterval(intervalId)
-  }
   intervalId = setInterval(() => {
     getDetail(currI)
   }, 1000)
@@ -250,6 +250,11 @@ async function getList() {
 export function usePlay() {
   onMounted(async () => {
     await getList()
+    window.addEventListener('resize', () => {
+      if (iframeH && iframeW) {
+        resize(iframeW, iframeH)
+      }
+    })
   })
   onUnmounted(() => {
     if (intervalId !== null) {

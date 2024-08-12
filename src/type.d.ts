@@ -20,3 +20,15 @@ export interface CustomElementData extends ElementData {
 }
 
 export type CustomActivity = CustomElementData[]
+
+export interface UserScroll {
+  userId: string
+  scrollReachY: number
+  cumulativeSum: number
+}
+
+export interface ScrollMapInfo {
+  scrollReachY: number
+  cumulativeSum: number
+  percUsers: number
+}

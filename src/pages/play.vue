@@ -22,16 +22,18 @@ const {
 
 <template>
   <div flex overflow-hidden>
-    <ul class="left">
-      <li
-        v-for="item in list" :key="item.sid" :class="{ 'text-green': currSid === item.sid }" class="cursor-pointer hover:color-teal"
-        @click="clickListItem(item.sid)"
-      >
-        {{ item.createTime }}
-      </li>
+    <div class="left">
+      <button class="i-carbon-update-now mb-4 btn" @click="getList" />
+      <ul>
+        <li
+          v-for="item in list" :key="item.sid" :class="{ 'text-green': currSid === item.sid }" class="cursor-pointer hover:color-teal"
+          @click="clickListItem(item.sid)"
+        >
+          {{ item.createTime }}
+        </li>
+      </ul>
+    </div>
 
-      <button class="i-carbon-update-now mt-4 btn" @click="getList" />
-    </ul>
     <div class="clarity-box">
       <div class="iframe-box">
         <iframe id="clarity" title="Clarity Inspector" scrolling="no" />
@@ -63,6 +65,14 @@ const {
 .left {
   float: left;
   width: 200px;
+  height: calc(100vh - 5rem);
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: left;
+  flex-direction: column;
+}
+.left>ul {
+  overflow-y: auto;
   height: calc(100vh - 5rem);
 }
 

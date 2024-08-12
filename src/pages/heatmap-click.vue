@@ -26,9 +26,8 @@ function resize(width: number, height: number): void {
   const px = 'px'
   const iframe = document.getElementById('clarity') as HTMLIFrameElement
   const container = document.querySelector('.heatmaps-heatmap-visual') as HTMLElement
-  const offsetTop = iframe.offsetTop
   const availableWidth = container.clientWidth - (2 * margin)
-  const availableHeight = container.clientHeight - offsetTop - (2 * margin)
+  const availableHeight = container.clientHeight - (2 * margin)
   currScale = Math.min(Math.min(availableWidth / width, 1), Math.min(availableHeight / height, 1))
   if (domWidth && domHeight) {
     const unscaledHeatmapArea = document.querySelector('.unscaled-heatmap-area') as HTMLElement

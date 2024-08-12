@@ -248,7 +248,7 @@ function decode$2(tokens) {
     case 7 /* Data.Event.Region */:
       var regionData = [];
       // From 0.6.15 we send each reach update in an individual event. This allows us to include time with it.
-      // To keep it backward compatible (<= 0.6.14), we look for multiple regions in the same event. This works both with newer and older payloads.
+      // To keep it backward compatible (<= 0.6.14), we look for multiple regions in the same event. This works both with newer and older payloads.json.
       // In future, we can update the logic to look deterministically for only 3 fields and remove the for loop.
       var increment = void 0;
       for (var i = 2; i < tokens.length; i += increment) {

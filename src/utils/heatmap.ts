@@ -19,7 +19,15 @@ function getSelector(clickData: ClickData, dom: DomEvent | null): string {
   return target?.selectorAlpha ?? target?.selectorBeta ?? ''
 }
 
-async function scrollToY(visualize: any, y: number) {
+export function getSelectorByHash(clickData: ClickData, dom: DomEvent | null): string {
+  if (!dom?.data)
+    return ''
+  const domData = dom.data as DomData[]
+  const target = domData.find((element: DomData) => element.hashAlpha === clickData.hash)
+  return target?.selectorAlpha ?? target?.selectorBeta ?? ''
+}
+
+export async function scrollToY(visualize: any, y: number) {
   await visualize.render([{ event: 10, data: { target: 2, x: 0, y } }])
   const iframe = document.getElementById('clarity') as HTMLIFrameElement
   iframe.style.top = `${y}px`

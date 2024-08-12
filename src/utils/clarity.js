@@ -3931,7 +3931,7 @@ function done(sequence) {
   }
 }
 function delay() {
-  // Progressively increase delay as we continue to send more payloads from the client to the server
+  // Progressively increase delay as we continue to send more payloads.json from the client to the server
   // If we are not uploading data to a server, and instead invoking UploadCallback, in that case keep returning configured value
   var gap = config$1.lean === false && discoverBytes > 0 ? 100 /* Setting.MinUploadDelay */ : data$1.sequence * config$1.delay;
   return typeof config$1.upload === "string" /* Constant.String */ ? Math.max(Math.min(gap, 30000 /* Setting.MaxUploadDelay */), 100 /* Setting.MinUploadDelay */) : config$1.delay;
@@ -4417,7 +4417,7 @@ function log(dimension, value) {
     if (data$3[dimension].indexOf(value) < 0) {
       data$3[dimension].push(value);
       // If this is a new value, track it as part of updates object
-      // This allows us to only send back new values in subsequent payloads
+      // This allows us to only send back new values in subsequent payloads.json
       if (!(dimension in updates)) {
         updates[dimension] = [];
       }

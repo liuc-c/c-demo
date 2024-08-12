@@ -8,16 +8,7 @@ import { getDetailsBySidApi, getListApi } from '~/api/clarity'
 import type { ListItem } from '~/type'
 import { setupIframe } from '~/utils/heatmap'
 import { copy } from '~/utils/util'
-
-// const { data } = useBroadcastChannel({ name: 'test_clarity' })
-
-// const { status, data, send } = useWebSocket('ws://192.168.1.10:3000', {
-//   autoReconnect: true,
-// })
-//
-// watch(data, () => {
-//   dataChange(data.value)
-// })
+import type { Event } from '~/emnus'
 
 const visualize = new Visualizer()
 let sessionId = '' // 会话ID

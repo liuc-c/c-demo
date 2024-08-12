@@ -1,4 +1,5 @@
 import type { ElementData } from 'clarity-visualize/types/visualize'
+import type { DomData } from 'clarity-decode/types/layout'
 
 export interface ListItem {
   createTime: string
@@ -31,4 +32,25 @@ export interface ScrollMapInfo {
   scrollReachY: number
   cumulativeSum: number
   percUsers: number
+}
+
+export interface ClickInfo {
+  [key: string]: {
+    hash: string
+    totalclicks: number
+    x: number[]
+    y: number[]
+    clicks: number[]
+    points: number
+    selector: null
+  }
+}
+
+export interface AreaMapItem {
+  domData: DomData
+  clicks: number
+  ctr: number
+  hash: string
+  content: string
+  parents: number[]
 }

@@ -52,4 +52,14 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
   },
+  build: {
+    rollupOptions: {
+      input: 'src/utils/clarity.js',
+      output: {
+        entryFileNames: 'clarity.js',
+        format: 'es',
+        name: 'clarity',
+      },
+    },
+  },
 })

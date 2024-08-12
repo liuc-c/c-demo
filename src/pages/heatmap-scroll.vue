@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import type { DecodedPayload } from 'clarity-decode/types/data'
 import type { DomEvent } from 'clarity-decode/types/layout'
 import decoded from '~/data/clarity-vyhvv2-1-decoded.json'
@@ -15,7 +15,9 @@ const visualize = new Visualizer()
 let domWidth: number, domHeight: number, iframeW: number, iframeH: number, currScale: number, screenHeight: number
 let iframeCurrTop = 0
 let iframeCurrHeight = 0
-
+const scrollInfoList = ref<ScrollMapInfo[]>([])
+const totalUserNumUI = ref<number>(0)
+let currMousePercUsers = { y: 0, percUser: 0 }
 function resize(width: number, height: number): void {
   iframeW = width
   iframeH = height
@@ -23,9 +25,8 @@ function resize(width: number, height: number): void {
   const px = 'px'
   const iframe = document.getElementById('clarity') as HTMLIFrameElement
   const container = document.querySelector('.heatmaps-heatmap-visual') as HTMLElement
-  const offsetTop = iframe.offsetTop
   const availableWidth = container.clientWidth - (2 * margin)
-  const availableHeight = container.clientHeight - offsetTop - (2 * margin)
+  const availableHeight = container.clientHeight - (2 * margin)
   currScale = Math.min(Math.min(availableWidth / width, 1), Math.min(availableHeight / height, 1))
   if (domWidth && domHeight) {
     const unscaledHeatmapArea = document.querySelector('.unscaled-heatmap-area') as HTMLElement
@@ -51,6 +52,7 @@ function getTotalUserNum(data: DecodedPayload[][]): number {
     const userId = item[0].envelope.userId
     userIds.add(userId)
   })
+  totalUserNumUI.value = userIds.size
   return userIds.size
 }
 
@@ -134,7 +136,7 @@ function getScrollMapInfo(data: DecodedPayload[][], totalUserNum: number): Scrol
   scrollMapInfo = scrollMapInfo.sort((a, b) => a.scrollReachY - b.scrollReachY)
   for (let i = scrollMapInfo.length - 1; i >= 0; i--) {
     if (scrollMapInfo[i].percUsers < minPerUser && minPerUser !== 0) {
-      scrollMapInfo[i].percUsers = minPerUser
+      scrollMapInfo[i].percUsers = Number.parseFloat(minPerUser.toFixed(2))
     }
     else {
       minPerUser = scrollMapInfo[i].percUsers
@@ -146,6 +148,7 @@ function getScrollMapInfo(data: DecodedPayload[][], totalUserNum: number): Scrol
       minCumulativeSum = scrollMapInfo[i].cumulativeSum
     }
   }
+  scrollInfoList.value = scrollMapInfo
   return scrollMapInfo
 }
 
@@ -175,7 +178,7 @@ async function initializeVisualizer(dJson: DecodedPayload[], iframe: HTMLIFrameE
   const mobile = isMobileDevice(dJson[0].dimension?.[0].data[0][0])
   const envelope = dJson[0].envelope
   visualize.setup(iframe.contentWindow as Window, { version: envelope.version, onresize: resize, mobile })
-  const baseLine = merged.events.find((event: any) => event.event === Event.Baseline) as any
+  const baseLine = merged.events.findLast((event: any) => event.event === Event.Baseline) as any
   if (baseLine?.data) {
     domWidth = baseLine.data.docWidth
     domHeight = baseLine.data.docHeight
@@ -196,25 +199,106 @@ onMounted(async () => {
 
   const decodeList = [decoded, decoded2, decoded3] as DecodedPayload[][]
   const totalUserNum = getTotalUserNum(decodeList)
-  const scrollYNum = getScrollYNum(decodeList)
-  const scrollMapInfo = getScrollMapInfo(decodeList, totalUserNum)
-  console.log(scrollMapInfo)
-  await renderScrollMap(visualize, scrollMapInfo, 0)
+  // const scrollYNum = getScrollYNum(decodeList)
+  getScrollMapInfo(decodeList, totalUserNum)
+
+  await renderScrollMap(visualize, scrollInfoList.value, 0)
   const canvas = iframe!.contentDocument!.getElementById('clarity-heatmap-canvas') as HTMLCanvasElement
   canvas.style.opacity = '0.5'
-  setupEventListeners(scrollMapInfo)
+  setupEventListeners(scrollInfoList.value)
   // ! 平均折叠数，获取baseline中dom的高度，然后除以所有高度
   // ! 平均受访数，获取所有用户数，然后除以所有高度
 })
+
+function scrollTo(reachY: number) {
+  const heatmapVisual = document.querySelector('.heatmaps-heatmap-visual') as HTMLElement
+  heatmapVisual.scrollTop = reachY / 100 * domHeight * currScale
+  iframeCurrTop = heatmapVisual.scrollTop
+}
+
+function createMarkerPercent(scale: number) {
+  const dom = document.querySelector('.heatmaps-scroll-marker') as HTMLElement
+  if (dom) {
+    return
+  }
+  // Create the parent div
+  const scrollMarkerDiv = document.createElement('div')
+  scrollMarkerDiv.className = 'heatmaps-scroll-marker'
+  scrollMarkerDiv.style.transform = `scale(${1 / scale})`
+  // Create the child div
+  const scrollMarkerInfoDiv = document.createElement('div')
+  scrollMarkerInfoDiv.className = 'heatmaps-scroll-marker-info bg-white dark:bg-gray'
+  // Create the first span
+  const percentSpan = document.createElement('span')
+  percentSpan.className = 'heatmaps-scroll-marker-percent'
+  percentSpan.textContent = `${currMousePercUsers.percUser}%`
+  // Create the second span
+  const textSpan = document.createElement('span')
+  textSpan.textContent = '到达此点的用户数'
+  // Append the spans to the child div
+  scrollMarkerInfoDiv.appendChild(percentSpan)
+  scrollMarkerInfoDiv.appendChild(textSpan)
+  // Append the child div to the parent div
+  scrollMarkerDiv.appendChild(scrollMarkerInfoDiv);
+  // Append the parent div to the desired container in the DOM
+  (document.querySelector('.heatmap-elements') as HTMLDivElement).appendChild(scrollMarkerDiv)
+}
+
+function moveMarkerPercent(top: number, scale: number, percUser: number) {
+  const scrollMarkerDiv = document.querySelector('.heatmaps-scroll-marker') as HTMLElement
+  Object.assign(scrollMarkerDiv.style, {
+    top: `${top}px`,
+    transform: `scale(${1 / scale})`,
+  })
+  const scrollMarkerPercentSpan = scrollMarkerDiv.querySelector('.heatmaps-scroll-marker-percent') as HTMLElement
+  scrollMarkerPercentSpan.textContent = `${percUser}%`
+}
+
+function removeMarkerPercent() {
+  const scrollMarkerDiv = document.querySelector('.heatmaps-scroll-marker') as HTMLElement
+  scrollMarkerDiv.remove()
+}
+
+function mouseEnter() {
+  createMarkerPercent(currScale)
+}
+
+function mouseMove(e: MouseEvent) {
+  const className = e.target?.className
+  if (className !== 'heatmap-elements') {
+    return
+  }
+  const scrollY = Math.round(e.offsetY / domHeight * 100)
+  if (scrollY === currMousePercUsers.y) {
+    moveMarkerPercent(e.offsetY, currScale, currMousePercUsers.percUser)
+    return
+  }
+  const scrollInfo = scrollInfoList.value.find(item => item.scrollReachY === scrollY)
+  if (!scrollInfo) {
+    return
+  }
+  currMousePercUsers = {
+    y: scrollY,
+    percUser: Number.parseFloat(scrollInfo.percUsers.toFixed(2)),
+  }
+  moveMarkerPercent(e.offsetY, currScale, currMousePercUsers.percUser)
+}
+
+function mouseLeave() {
+  removeMarkerPercent()
+}
 </script>
 
 <template>
   <div class="content">
-    <div class="heatmap-sidebar-wrapper-compare-parent">
+    <div class="heatmap-sidebar-wrapper-compare-parent mr-2">
       <ul>
-        <li>一些信息一些信息一些信息</li>
-        <li>一些信息一些信息一些信息</li>
-        <li>一些信息一些信息一些信息</li>
+        <template v-for="item in scrollInfoList" :key="item.scrollReachY">
+          <li v-if="item.scrollReachY % 5 === 0" grid="~ cols-2" @click="scrollTo(item.scrollReachY)">
+            <span class="cursor-pointer select-none c-blue hover:c-green">{{ `${item.scrollReachY}%` }}</span>
+            <span>{{ `${Math.round(item.percUsers / 100 * totalUserNumUI)}(${item.percUsers}%)` }}</span>
+          </li>
+        </template>
       </ul>
     </div>
     <div class="heatmap-container">
@@ -222,14 +306,13 @@ onMounted(async () => {
         <div class="heatmaps-heatmap-visual">
           <div class="unscaled-heatmap-area">
             <div class="heatmap-wrapper">
-              <div class="heatmap-elements" />
+              <div class="heatmap-elements" @mouseenter="mouseEnter" @mousemove="mouseMove" @mouseleave="mouseLeave" />
               <iframe id="clarity" title="Clarity Inspector" scrolling="no" />
             </div>
           </div>
         </div>
       </div>
       <div class="heatmaps-heatmap-footer">
-        1
         1
       </div>
     </div>

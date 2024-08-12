@@ -1649,12 +1649,12 @@ var Visualizer = /** @class */ (function () {
     };
     this.merge = function (decoded) {
       var merged = { timestamp: null, envelope: null, dom: null, events: [] };
-      // Re-arrange decoded payloads in the order of their start time
+      // Re-arrange decoded payloads.json in the order of their start time
       decoded = decoded.sort(_this.sortPayloads);
       // Re-initialize enrich class if someone ends up calling merge function directly
       _this.enrich = _this.enrich || new EnrichHelper();
       _this.enrich.reset();
-      // Walk through payloads and generate merged payload from an array of decoded payloads
+      // Walk through payloads.json and generate merged payload from an array of decoded payloads.json
       for (var _i = 0, decoded_1 = decoded; _i < decoded_1.length; _i++) {
         var payload = decoded_1[_i];
         merged.timestamp = merged.timestamp ? merged.timestamp : payload.timestamp;

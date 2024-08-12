@@ -71,3 +71,42 @@ html.dark {
 ::-webkit-scrollbar-thumb:hover {
   background-color: #555; /* 滚动条悬停颜色 */
 }
+.heatmaps-scroll-marker{
+  width: 100%;
+  position: absolute;
+  text-align: center;
+  z-index: 3;
+}
+.heatmaps-scroll-marker-info{
+  display: inline-flex;
+  width: 200px;
+  height: 48px;
+  padding: 7px 12px;
+  font-weight: 400;
+  border-radius: 4px;
+  font-size: 12px;
+  font-style: italic;
+  align-items: center;
+  text-align: start;
+}
+.heatmaps-scroll-marker-info::before,
+.heatmaps-scroll-marker-info::after{
+  content: "";
+  border-top: 1px solid #323130;
+  margin: auto;
+  display: block;
+  width: calc((100% - 200px) / 2);
+  position: absolute;
+  left: 0;
+  top: 24px;
+}
+.heatmaps-scroll-marker-info::after{
+  right: 0;
+  left: auto;
+}
+.heatmaps-scroll-marker-percent{
+  font-size: 28px;
+  font-style: normal;
+  font-weight: 600;
+  padding-right: 8px;
+}

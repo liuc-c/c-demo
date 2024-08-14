@@ -19,7 +19,6 @@ let iframeCurrTop = 0
 const visualize = new Visualizer()
 let domDataList = [] as DomData[]
 let domDataMap = new Map<number, DomData>()
-const pageViews = 7281
 const totalClicks = 8586
 const isEditMode = ref(false)
 const areaMapListUI = ref<AreaMapItem[]>([])
@@ -65,7 +64,6 @@ function injectAreaMapShadowRoot() {
   const div = document.createElement('div')
   div.id = 'clarity-area-map'
   Object.assign(div.style, {
-    'pointerEvents': 'none',
     'display': 'block',
     'position': 'absolute',
     'top': '0px',
@@ -111,7 +109,7 @@ function sort(a: Data.DecodedEvent, b: Data.DecodedEvent): number {
   return a.time - b.time
 }
 
-// Disable pointer events for elements outside the body
+// Disable pointer events for elements outside the body of the iframe
 function disableOutsideBodyPointerEvents(iframeDom: Document) {
   const interactionCanvas = iframeDom.getElementById('clarity-interaction-canvas') as HTMLCanvasElement
   interactionCanvas.style.pointerEvents = 'none'
@@ -154,16 +152,16 @@ function getClicksByHash(hash: string | undefined | null, hashBeta: string | und
 
 function getColorByCTR(ctr: number): string {
   if (ctr >= 0 && ctr < 5) {
-    return `0,${Math.round(ctr * 51)},255` // Blue
+    return `0,${Math.round(ctr * 255 / 5)},255` // Blue
   }
-  else if (ctr >= 5 && ctr < 10) {
-    return `0,255,${255 - Math.round((ctr - 5) * 51)}` // Cyan
+  else if (ctr >= 5 && ctr < 15) {
+    return `0,255,${255 - Math.round((ctr - 5) * 255 / 10)}` // Cyan
   }
-  else if (ctr >= 10 && ctr < 15) {
-    return `${Math.round((ctr - 10) * 51)},255,0` // Lime
+  else if (ctr >= 15 && ctr < 30) {
+    return `${Math.round((ctr - 10) * 255 / 15)},255,0` // Lime
   }
   else {
-    return `255,${Math.max(255 - Math.round((ctr - 15) * 51))},0` // Orange
+    return `255,${Math.max(255 - Math.round((ctr - 15) * 255 / 70))},0` // Orange
   }
 }
 
@@ -182,6 +180,7 @@ function generateAreaElement(iframeDom: Document, options: { hash: string, click
   const mainDiv = document.createElement('div')
   mainDiv.id = domId
   mainDiv.setAttribute('data-total-click', clicks.toString())
+  mainDiv.setAttribute('data-ctr', `${ctr}%`)
   mainDiv.setAttribute('data-clarity-area-map-div', '1')
   const color = getColorByCTR(ctr)
   // Create the style element
@@ -210,6 +209,7 @@ function generateAreaElement(iframeDom: Document, options: { hash: string, click
   const innerDiv = document.createElement('div')
   innerDiv.setAttribute('data-clarity-area-map-div', '1')
   innerDiv.style.cssText = `
+    pointer-events: none;
     color: white;
     font-weight: bold;
     -webkit-text-stroke: 1px black;
@@ -218,10 +218,55 @@ function generateAreaElement(iframeDom: Document, options: { hash: string, click
   `
   innerDiv.textContent = `${ctr}%`
 
+  mainDiv.addEventListener('click', (e) => {
+    const currTarget = e.target as HTMLElement
+    hideTips()
+    setTipsPositionByDom(currTarget, 'click')
+  })
+  mainDiv.addEventListener('mouseenter', (e) => {
+    const currTarget = e.target as HTMLElement
+    setTipsPositionByDom(currTarget, 'mouseenter')
+  })
+
+  mainDiv.addEventListener('mouseleave', () => {
+    hideTips()
+  })
+
   // Append the style and inner div to the main div
   mainDiv.appendChild(style)
   mainDiv.appendChild(innerDiv)
   areaMapDom.appendChild(mainDiv)
+}
+function hideTips(type = 'mouseenter') {
+  const tipsId = type === 'click' ? 'clarity-hover-tip-info-click' : 'clarity-hover-tip-info'
+  const tips = document.getElementById(tipsId) as HTMLElement
+  tips.style.display = 'none'
+}
+
+function setTipsPositionByDom(targetDom: HTMLElement, type: string) {
+  const tipsId = type === 'click' ? 'clarity-hover-tip-info-click' : 'clarity-hover-tip-info'
+  const targetRects = targetDom.getBoundingClientRect()
+  const iframe = document.getElementById('clarity') as HTMLIFrameElement
+  const iframeRect = iframe.getBoundingClientRect()
+  const tips = document.getElementById(tipsId) as HTMLElement
+  tips.style.display = 'block'
+  const tipsRects = tips.getBoundingClientRect()
+  const totalClicks = targetDom.getAttribute('data-total-click') || ''
+  const ctr = targetDom.getAttribute('data-ctr') || ''
+  tips.textContent = `点击次数：${totalClicks}，CTR：${ctr}`
+  const windowWidth = window.innerWidth
+  const iframeRightEdge = windowWidth - iframeRect.left - iframeRect.width
+
+  const targetRightEdge = targetRects.left + targetRects.width
+  const scaledTargetRightEdge = targetRightEdge * currScale + iframeRect.left
+  const maxLeft = windowWidth - tipsRects.width - iframeRightEdge
+  const left = Math.max(Math.min(scaledTargetRightEdge - tipsRects.width, maxLeft), 0)
+
+  const scaledTargetTop = targetRects.top * currScale + iframeRect.top
+  const top = Math.max(scaledTargetTop - tipsRects.height, 0)
+
+  tips.style.top = `${top}px`
+  tips.style.left = `${left}px`
 }
 
 /**
@@ -262,8 +307,8 @@ function removeClashDom(dom: DomData, domParents: number[]) {
       removeAreaElement(item.hash, item.domData.id)
       return false
     }
-    const parents = item.parents
-    if (parents.includes(currDomId)) {
+    const itemParents = item.parents
+    if (itemParents.includes(currDomId)) {
       removeAreaElement(item.hash, item.domData.id)
       return false
     }
@@ -331,6 +376,8 @@ let editModeMouseMoveListener: any
 function openEditModal() {
   isEditMode.value = true
   const iframeDom = getIframeDom()
+  const editAreaMap = iframeDom.getElementById('clarity-area-map') as HTMLElement
+  editAreaMap.style.pointerEvents = 'none'
   editModeClickListener = (e: MouseEvent) => {
     const target = e.target as HTMLElement
     const hash = target.getAttribute('data-clarity-hashalpha') || ''
@@ -361,6 +408,8 @@ function closeEditModal() {
   iframeDom.body.removeEventListener('mousemove', editModeMouseMoveListener)
   const editHover = iframeDom.getElementById('clarity-edit-hover') as HTMLElement
   editHover.style.display = 'none'
+  const editAreaMap = iframeDom.getElementById('clarity-area-map') as HTMLElement
+  editAreaMap.style.pointerEvents = 'auto'
 }
 
 function setupEventListeners() {
@@ -371,6 +420,7 @@ function setupEventListeners() {
 
   // scroll event
   const throttleRender = throttle(() => {
+    hideTips('click')
     scrollToY(visualize, heatmapVisual.scrollTop / currScale)
     iframeCurrTop = heatmapVisual.scrollTop
   }, 100)
@@ -380,6 +430,7 @@ function setupEventListeners() {
   // resize event
   const throttleResize = throttle(() => {
     closeEditModal()
+    hideTips('click')
     resize(iframeW, iframeH)
   }, 100)
   window.addEventListener('resize', () => {
@@ -406,11 +457,143 @@ function getDomDataList(merged: MergedPayload): DomData[] {
     })
   })
   domDataMap = domMap
-  // console.log(convertToTree(Array.from(domMap.values())))
+  const domTree = convertToTree(Array.from(domMap.values()))
+  const bodyTree = findBodyNodeUnderHtml(domTree) as DomDataTree
+  const lastLevelNodes = bfsCollectDomNodes(bodyTree)
+  lastLevelNodes.forEach((item) => {
+    getCTRByDom(item)
+  })
   return Array.from(domMap.values())
 }
 
+function bfsCollectDomNodes(root: DomDataTree): DomDataTree[] {
+  const queue: DomDataTree[] = [root]
+  let currentLevelNodes: DomDataTree[] = []
+  let nextLevelNodes: DomDataTree[] = []
+  const iframe = getIframeDom()
+  while (queue.length > 0) {
+    const node = queue.shift()!
+    const domElement = getDomById(node.id, iframe)
+    if (!domElement) {
+      continue
+    }
+    const rect = domElement.getBoundingClientRect()
+    if (rect.width <= 200 || rect.height === 0) {
+      continue
+    }
+    currentLevelNodes.push(node)
+    if (currentLevelNodes.length >= 6 && queue.length === 0) {
+      return currentLevelNodes
+    }
+    nextLevelNodes.push(...node.children)
+    if (queue.length === 0) {
+      queue.push(...nextLevelNodes)
+      nextLevelNodes = []
+      currentLevelNodes = []
+    }
+  }
+  return currentLevelNodes
+}
+
+function getDomById(id: number, iframe: Document): HTMLElement {
+  return iframe.querySelector(`[data-clarity-id="${id}"]`) as HTMLElement
+}
+
+interface DomDataTree extends DomData {
+  children: DomDataTree[]
+}
+
+function findBodyNodeUnderHtml(domDataTree: DomDataTree[]): DomDataTree | null {
+  const queue: DomDataTree[] = [...domDataTree]
+  let htmlNode: DomDataTree | null = null
+
+  while (queue.length > 0) {
+    const node = queue.shift()!
+    if (node.tag.toUpperCase() === 'HTML') {
+      htmlNode = node
+      break
+    }
+    queue.push(...node.children)
+  }
+
+  if (htmlNode) {
+    for (const child of htmlNode.children) {
+      if (child.tag.toUpperCase() === 'BODY') {
+        return child
+      }
+    }
+  }
+
+  return null
+}
+
+function convertToTree(domDataArray: DomData[]): DomDataTree[] {
+  const map = new Map<number, DomDataTree>()
+  const roots: DomDataTree[] = []
+
+  domDataArray.forEach((node) => {
+    map.set(node.id, { ...node, children: [] })
+  })
+
+  domDataArray.forEach((node) => {
+    const parentNode = map.get(node.parent)
+    if (parentNode) {
+      parentNode.children.push(map.get(node.id)!)
+    }
+    else {
+      roots.push(map.get(node.id)!)
+    }
+
+    const previousNode = map.get(node.previous)
+    if (previousNode) {
+      const parentChildren = parentNode ? parentNode.children : roots
+      const index = parentChildren.indexOf(map.get(node.id)!)
+      if (index > 0) {
+        parentChildren.splice(index, 1)
+        parentChildren.splice(parentChildren.indexOf(previousNode) + 1, 0, map.get(node.id)!)
+      }
+    }
+  })
+  return roots
+}
+
+function createHoverDiv() {
+  if (document.getElementById('clarity-hover-tip-info')) {
+    return
+  }
+  const tipsHover = document.createElement('div')
+  tipsHover.id = 'clarity-hover-tip-info'
+  Object.assign(tipsHover.style, {
+    'display': 'none',
+    'width': '200px',
+    'max-height': '200px',
+    'position': 'fixed',
+    'top': '0px',
+    'right': '0px',
+    'backgroundColor': 'lime',
+    'zIndex': '100',
+  })
+  document.body.append(tipsHover)
+  if (document.getElementById('clarity-hover-tip-info-click')) {
+    return
+  }
+  const clickTipsHover = document.createElement('div')
+  clickTipsHover.id = 'clarity-hover-tip-info-click'
+  Object.assign(clickTipsHover.style, {
+    'display': 'none',
+    'width': '200px',
+    'max-height': '200px',
+    'position': 'fixed',
+    'top': '0px',
+    'right': '0px',
+    'backgroundColor': 'lime',
+    'zIndex': '100',
+  })
+  document.body.append(clickTipsHover)
+}
+
 onMounted(async () => {
+  createHoverDiv()
   const dJsons = []
   for (const payload of payloads) {
     const decoded = decode(payload)
@@ -428,25 +611,29 @@ onMounted(async () => {
   await visualize.dom(merged.dom)
   const noRender = [
     Event.Click,
+    Event.DoubleClick,
     Event.MouseMove,
     Event.MouseUp,
     Event.MouseDown,
     Event.TouchMove,
+    Event.TouchEnd,
+    Event.TouchStart,
     Event.Scroll,
   ]
-  domDataList = getDomDataList(merged)
-  await visualize.render(merged.events.filter((item: any) => !noRender.includes(item.event)).sort(sort))
+  await visualize.render(merged.events.filter((item: any) => !noRender.includes(item.event) && item.time < 1000).sort(sort))
   injectAreaMapShadowRoot()
   setupEventListeners()
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  domDataList = getDomDataList(merged)
 })
 </script>
 
 <template>
   <IframeLayout>
     <template #left>
-      <ul>
+      <ul w-200px>
         <template v-for="item in areaMapListUI" :key="item.hash">
-          <li w-200px overflow-hidden>
+          <li overflow-hidden>
             {{ item.content || item.domData.selectorBeta }}
           </li>
         </template>

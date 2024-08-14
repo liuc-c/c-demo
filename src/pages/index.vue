@@ -12,7 +12,6 @@ onMounted(() => {
     // t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
     t = l.createElement(r); t.async = 1; t.src = `http://192.168.1.20:3501/tag/${i}`
     y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y)
-    console.log(y, 222)
   })(window, document, 'clarity', 'script', 'ngd900iyph')
   // clarity.start({
   //   delay: 500,

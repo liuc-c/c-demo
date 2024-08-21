@@ -1,5 +1,8 @@
 <script setup lang="ts">
-
+defineProps({ iframeId: {
+  type: String,
+  default: 'clarity',
+} })
 </script>
 
 <template>
@@ -13,7 +16,7 @@
           <div class="unscaled-heatmap-area">
             <div class="heatmap-wrapper">
               <div class="heatmap-elements" />
-              <iframe id="clarity" title="Clarity Inspector" scrolling="no" />
+              <iframe :id="iframeId" title="Clarity Inspector" scrolling="no" />
             </div>
           </div>
         </div>
@@ -50,7 +53,6 @@
   margin: 0 16px 0 12px;
   border-radius: 8px 8px 0 0;
   border:  1px solid #CCC;
-
 }
 .heatmaps-heatmap-footer{
   margin: 0 16px 12px 12px;

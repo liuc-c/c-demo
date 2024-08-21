@@ -6,6 +6,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <title>Vitesse Lite</title>
   <meta name="description" content="Opinionated Vite Starter Template">
+<!--  <script src="http://api.a3gj.com/tag/ngd900iyph"></script>-->
 </head>
 <body class="font-sans dark:text-white dark:bg-hex-121212">
   <div id="app"></div>
@@ -17,7 +18,7 @@
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
       const setting = localStorage.getItem('color-schema') || 'auto'
       if (setting === 'dark' || (prefersDark && setting !== 'light'))
-        document.documentElement.classList.toggle('light', true)
+        document.documentElement.classList.toggle('dark', true)
     })()
   </script>
   <script type="module" src="/src/main.ts"></script>

@@ -79,7 +79,7 @@ onMounted(async () => {
 
   const envelope = dJson[0].envelope
   const merged = visualize.merge([...dJson, ...dJson2, ...dJson4, ...dJson5])
-  const clickEvents = merged.events.filter((event: any) => event.event === 16 || event.event === 9)
+  const clickEvents = merged.events.filter((event: any) => event.event === Event.Click)
   const dom = merged.dom as DomEvent | null
   activity.value = getActivityData(clickEvents, dom)
   const mobile = isMobileDevice(dJson[0].dimension?.[0].data[0][0])

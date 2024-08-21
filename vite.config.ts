@@ -6,6 +6,7 @@ import Vue from '@vitejs/plugin-vue'
 import Pages from 'vite-plugin-pages'
 import UnoCSS from 'unocss/vite'
 import VueMacros from 'unplugin-vue-macros/vite'
+import VueRouter from 'unplugin-vue-router/vite'
 
 export default defineConfig({
   resolve: {
@@ -26,9 +27,11 @@ export default defineConfig({
         }),
       },
     }),
-
+    VueRouter(),
     // https://github.com/hannoeru/vite-plugin-pages
-    Pages(),
+    Pages({
+      pagesDir: `src/pages`,
+    }),
 
     // https://github.com/antfu/unocss
     // see uno.config.ts for config
@@ -51,15 +54,5 @@ export default defineConfig({
   // https://github.com/vitest-dev/vitest
   test: {
     environment: 'jsdom',
-  },
-  build: {
-    rollupOptions: {
-      input: 'src/utils/clarity.js',
-      output: {
-        entryFileNames: 'clarity.js',
-        format: 'es',
-        name: 'clarity',
-      },
-    },
   },
 })

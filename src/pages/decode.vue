@@ -2,14 +2,25 @@
 import { onMounted, ref, watch } from 'vue'
 import { codeToHtml, getHighlighter } from 'shiki/bundle/web'
 import { decode } from '../../../clarity/packages/clarity-decode/build/clarity.decode.module'
+import { Visualizer } from '../../../clarity/packages/clarity-visualize/build/clarity.visualize.module'
+import { Event } from '~/emnus'
 
 const input = ref('')
 const output = ref('')
 const leftPanelWidth = ref('50%')
 const dividerRef = ref<HTMLElement | null>(null)
+const visualizer = new Visualizer()
 let highlighter: any
 
 const decodeOutput = ref<any[]>([])
+
+async function getHightLight(data: any) {
+  const jsonString = JSON.stringify(data, null, 2)
+  return await codeToHtml(jsonString, {
+    lang: 'json',
+    theme: 'github-dark',
+  })
+}
 
 async function decodeInput() {
   try {
@@ -85,16 +96,39 @@ watch(input, () => {
   decodeInput()
 })
 
-function getDomData() {
+async function getDomData() {
+  output.value = await getHightLight(visualizer.merge(decodeOutput.value))
+}
+
+async function getClickData() {
+  const merged = visualizer.merge(decodeOutput.value)
+  output.value = await getHightLight(merged.events.filter((event: any) => event.event === Event.Click))
+}
+async function getScrollData() {
+  const merged = visualizer.merge(decodeOutput.value)
+  output.value = await getHightLight(merged.events.filter((event: any) => event.event === Event.Scroll))
+}
+
+async function replay() {
+  output.value = await getHightLight(decodeOutput.value)
 }
 </script>
 
 <template>
   <div class="decoder-container">
-    <div class="toolbar">
+    <div class="toolbar" flex gap-10px>
       <!-- 在这里添加工具栏内容 -->
+      <button btn @click="replay">
+        源数据
+      </button>
       <button btn @click="getDomData">
-        获取数据
+        获取Dom数据
+      </button>
+      <button btn @click="getClickData">
+        获取Click数据
+      </button>
+      <button btn @click="getScrollData">
+        获取Scroll数据
       </button>
     </div>
     <div class="main-container">
@@ -132,6 +166,10 @@ function getDomData() {
   flex-shrink: 0;
   margin-bottom: 10px;
   padding: 10px;
+}
+
+.toolbar button {
+  height: 36px;
 }
 
 .main-container {

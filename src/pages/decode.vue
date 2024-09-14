@@ -1,25 +1,61 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import { codeToHtml, getHighlighter } from 'shiki/bundle/web'
+import { decode } from '../../../clarity/packages/clarity-decode/build/clarity.decode.module'
 
 const input = ref('')
 const output = ref('')
 const leftPanelWidth = ref('50%')
 const dividerRef = ref<HTMLElement | null>(null)
+let highlighter: any
 
-function decodeInput() {
+const decodeOutput = ref<any[]>([])
+
+async function decodeInput() {
   try {
-    const decoded = JSON.parse(input.value)
-    output.value = JSON.stringify(decoded, null, 2)
+    const parsedInput = JSON.parse(input.value)
+    let result: any[]
+
+    if (typeof parsedInput === 'string') {
+      result = [decode(parsedInput)]
+    }
+    else if (Array.isArray(parsedInput)) {
+      result = parsedInput.map((item) => {
+        if (typeof item === 'string') {
+          return decode(item)
+        }
+        return item
+      })
+    }
+    else {
+      result = [parsedInput]
+    }
+    decodeOutput.value = result
+    const jsonString = JSON.stringify(result, null, 2)
+    if (highlighter) {
+      output.value = await codeToHtml(jsonString, {
+        lang: 'json',
+        theme: 'github-dark',
+      })
+    }
+    else {
+      output.value = jsonString
+    }
   }
-  catch {
-    output.value = '解码失败：输入不是有效的 JSON 格式'
+  catch (error: any) {
+    output.value = error.message || '解码失败：输入不是有效的 JSON 格式'
   }
 }
 
 function handleDrag(e: MouseEvent) {
   const container = document.querySelector('.main-container') as HTMLElement
   if (container) {
-    const newWidth = (e.clientX / container.offsetWidth) * 100
+    // 获取左侧 padding 值（假设为 1rem）
+    const paddingLeft = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+    // 调整鼠标位置，考虑左侧 padding
+    const adjustedClientX = e.clientX - paddingLeft
+    // 计算新的宽度百分比
+    const newWidth = (adjustedClientX / container.offsetWidth) * 100
     leftPanelWidth.value = `${Math.min(Math.max(newWidth, 10), 90)}%`
   }
 }
@@ -34,20 +70,32 @@ function handleMouseDown(event: MouseEvent) {
 }
 
 onMounted(async () => {
-  if (dividerRef.value) {
-    dividerRef.value.addEventListener('mousedown', handleMouseDown)
+  try {
+    highlighter = await getHighlighter({
+      themes: ['github-dark'],
+      langs: ['json'],
+    })
+  }
+  catch (error) {
+    console.error('初始化 shiki 失败:', error)
   }
 })
 
 watch(input, () => {
   decodeInput()
 })
+
+function getDomData() {
+}
 </script>
 
 <template>
   <div class="decoder-container">
     <div class="toolbar">
       <!-- 在这里添加工具栏内容 -->
+      <button btn @click="getDomData">
+        获取数据
+      </button>
     </div>
     <div class="main-container">
       <div class="input-section" :style="{ width: leftPanelWidth }">
@@ -57,6 +105,7 @@ watch(input, () => {
       <div
         ref="dividerRef"
         class="divider"
+        @mousedown="handleMouseDown"
       />
       <div class="output-section" :style="{ width: `calc(100% - ${leftPanelWidth})` }">
         <h2>输出</h2>
@@ -76,11 +125,13 @@ watch(input, () => {
 }
 
 .toolbar {
+  background: #24292E;
+  border-radius: 10px;
   height: 100px;
   width: 100%;
-  background-color: #f0f0f0;
   flex-shrink: 0;
   margin-bottom: 10px;
+  padding: 10px;
 }
 
 .main-container {
@@ -104,18 +155,34 @@ watch(input, () => {
 
 textarea {
   flex: 1;
-  width: 100%;
+  width: calc(100% - 10px);
   resize: none;
   padding: 10px;
-  border: 1px solid #ccc;
   overflow-y: auto;
+  background:#24292E;
+  border-radius: 10px;
+
+}
+textarea:focus {
+  outline: none;
 }
 
 .output-content {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
-  text-align: left; /* 添加这一行 */
+  text-align: left;
+  background: #24292E;
+  border-radius: 10px;
+  margin-left: 10px;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.output-content :deep(pre) {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 h2 {

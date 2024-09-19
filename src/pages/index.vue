@@ -6,38 +6,38 @@ const name = ref('')
 
 // const { post } = useBroadcastChannel({ name: 'test_clarity' })
 
-onMounted(() => {
-  (function (c, l, a, r, i, t, y) {
-    c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) }
-    // t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-    t = l.createElement(r); t.async = 1; t.src = `http://www.a3gj.com/api/tag/${i}`
-    y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y)
-  })(window, document, 'clarity', 'script', 'ngd900iyph')
-  // clarity.start({
-  //   delay: 500,
-  //   lean: false,
-  //   drop: [],
-  //   mask: [],
-  //   unmask: ['div'],
-  //   content: true,
-  //   fraud: true,
-  //   track: true,
-  //   throttleDom: true,
-  //   checksum: [],
-  //   upload: (data: string): void => {
-  //     // post(data)
-  //     const decoded = decode(data)
-  //     console.log(decoded)
-  //     // console.log(`projectId ： ${decoded.envelope.projectId}`)
-  //     // console.log(`userId ： ${decoded.envelope.userId}`)
-  //     // console.log(`sessionId ： ${decoded.envelope.sessionId}`)
-  //     // if (status.value === 'OPEN') {
-  //     //   send(JSON.stringify({ type: 'get', data }))
-  //     // }
-  //   },
-  //   projectId: 'hhhhhhh',
-  // })
-})
+// onMounted(() => {
+//   (function (c, l, a, r, i, t, y) {
+//     c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) }
+//     // t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+//     t = l.createElement(r); t.async = 1; t.src = `http://www.a3gj.com/api/tag/${i}`
+//     y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y)
+//   })(window, document, 'clarity', 'script', 'ngd900iyph')
+// clarity.start({
+//   delay: 500,
+//   lean: false,
+//   drop: [],
+//   mask: [],
+//   unmask: ['div'],
+//   content: true,
+//   fraud: true,
+//   track: true,
+//   throttleDom: true,
+//   checksum: [],
+//   upload: (data: string): void => {
+//     // post(data)
+//     const decoded = decode(data)
+//     console.log(decoded)
+//     // console.log(`projectId ： ${decoded.envelope.projectId}`)
+//     // console.log(`userId ： ${decoded.envelope.userId}`)
+//     // console.log(`sessionId ： ${decoded.envelope.sessionId}`)
+//     // if (status.value === 'OPEN') {
+//     //   send(JSON.stringify({ type: 'get', data }))
+//     // }
+//   },
+//   projectId: 'hhhhhhh',
+// })
+// })
 
 function getColor(index: number): string {
   // 列出 20 种颜色

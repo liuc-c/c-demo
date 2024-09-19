@@ -36,7 +36,6 @@
     "eslint": "^9.8.0",
     "eslint-define-config": "^2.1.0",
     "jsdom": "^24.1.1",
-    "lint-staged": "^15.2.7",
     "pnpm": "^9.6.0",
     "taze": "^0.16.3",
     "typescript": "^5.5.4",

@@ -22,21 +22,30 @@ async function getHightLight(data: any) {
   })
 }
 
+const currentEvent = ref<Event[]>([])
+
+async function getEventData() {
+  const copyData = JSON.parse(JSON.stringify(decodeOutput.value))
+  const merged = visualizer.merge(copyData)
+  const uniqueEvents = [...new Set(merged.events.map((event: { event: Event }) => event.event))]
+  currentEvent.value = uniqueEvents
+}
+
 async function decodeInput() {
   try {
     const parsedInput = JSON.parse(input.value)
     let result: any[]
 
-    if (typeof parsedInput === 'string') {
-      result = [decode(parsedInput)]
-    }
-    else if (Array.isArray(parsedInput)) {
+    if (Array.isArray(parsedInput)) {
       result = parsedInput.map((item) => {
         if (typeof item === 'string') {
           return decode(item)
         }
         return item
       })
+    }
+    else if (typeof parsedInput === 'object') {
+      result = [decode(input.value)]
     }
     else {
       result = [parsedInput]
@@ -52,6 +61,7 @@ async function decodeInput() {
     else {
       output.value = jsonString
     }
+    getEventData()
   }
   catch (error: any) {
     output.value = error.message || '解码失败：输入不是有效的 JSON 格式'
@@ -97,38 +107,48 @@ watch(input, () => {
 })
 
 async function getDomData() {
-  output.value = await getHightLight(visualizer.merge(decodeOutput.value))
+  const copyData = JSON.parse(JSON.stringify(decodeOutput.value))
+  output.value = await getHightLight(visualizer.merge(copyData).dom)
 }
 
-async function getClickData() {
-  const merged = visualizer.merge(decodeOutput.value)
-  output.value = await getHightLight(merged.events.filter((event: any) => event.event === Event.Click))
-}
-async function getScrollData() {
-  const merged = visualizer.merge(decodeOutput.value)
-  output.value = await getHightLight(merged.events.filter((event: any) => event.event === Event.Scroll))
+async function getEnvelopeData() {
+  const copyData = JSON.parse(JSON.stringify(decodeOutput.value))
+  output.value = await getHightLight(copyData.map((event: any) => event.envelope))
 }
 
 async function replay() {
-  output.value = await getHightLight(decodeOutput.value)
+  const copyData = JSON.parse(JSON.stringify(decodeOutput.value))
+  output.value = await getHightLight(copyData)
+}
+
+async function getDataByEvent(item: Event) {
+  const copyData = JSON.parse(JSON.stringify(decodeOutput.value))
+  const merged = visualizer.merge(copyData)
+  output.value = await getHightLight(merged.events.filter((event: any) => event.event === item))
 }
 </script>
 
 <template>
   <div class="decoder-container">
     <div class="toolbar" flex gap-10px>
-      <!-- 在这里添加工具栏内容 -->
+      <!-- 现有的按钮 -->
       <button btn @click="replay">
         源数据
       </button>
       <button btn @click="getDomData">
         获取Dom数据
       </button>
-      <button btn @click="getClickData">
-        获取Click数据
+      <button btn @click="getEnvelopeData">
+        Envelope
       </button>
-      <button btn @click="getScrollData">
-        获取Scroll数据
+      <!-- 新增的动态按钮 -->
+      <button
+        v-for="event in currentEvent"
+        :key="event"
+        btn
+        @click="getDataByEvent(event)"
+      >
+        {{ Event[event] }}
       </button>
     </div>
     <div class="main-container">
@@ -186,7 +206,7 @@ async function replay() {
 
 .divider {
   width: 4px;
-  background-color: #ccc;
+  background-color: #24292E;
   cursor: col-resize;
   flex-shrink: 0;
 }
